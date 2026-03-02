@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #222222;
+      --accent: #c8f135;
+      --accent2: #f1c035;
+      --text: #f0f0f0;
+      --muted: #555;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      margin-bottom: 48px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.6s ease both;
+      animation-delay: 0.1s;
+    }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Drop zone */
+    .dropzone {
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(200, 241, 53, 0.04);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dropzone-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .dropzone-text {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .dropzone-text strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .file-selected {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--accent2);
+      display: none;
+    }
+
+    /* Controls row */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .field select, .field input[type="number"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      appearance: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field select:focus, .field input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 14px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.99); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 13px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 14px;
+    }
+
+    /* Results */
+    #results { display: none; animation: fadeUp 0.5s ease both; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .results-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .results-count {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .question-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 16px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .question-card:nth-child(1) { animation-delay: 0.05s; }
+    .question-card:nth-child(2) { animation-delay: 0.1s; }
+    .question-card:nth-child(3) { animation-delay: 0.15s; }
+    .question-card:nth-child(4) { animation-delay: 0.2s; }
+    .question-card:nth-child(5) { animation-delay: 0.25s; }
+
+    .q-number {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .q-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .options { display: flex; flex-direction: column; gap: 8px; }
+
+    .option {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+
+    .option:hover { border-color: #444; background: rgba(255,255,255,0.03); }
+    .option.correct { border-color: var(--accent); background: rgba(200,241,53,0.08); color: var(--accent); }
+    .option.wrong { border-color: #ff4444; background: rgba(255,68,68,0.07); color: #ff6666; }
+
+    .explanation {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(200,241,53,0.05);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .explanation.show { display: block; animation: fadeUp 0.3s ease both; }
+
+    /* Error */
+    .error-box {
+      display: none;
+      padding: 14px 18px;
+      background: rgba(255,68,68,0.08);
+      border: 1px solid rgba(255,68,68,0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #ff6666;
+      margin-top: 16px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="tag">AI-Powered</div>
+      <h1>Quiz<br/><span>Generator</span></h1>
+      <p class="subtitle">Upload a PDF or DOCX — get an instant quiz.</p>
+    </header>
+
+    <div class="card">
+      <div class="card-label">01 — Upload Document</div>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".pdf,.docx" />
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-text">
+          <strong>Click to upload</strong> or drag & drop<br/>
+          PDF or DOCX — max 10MB
+        </div>
+        <div class="file-selected" id="fileSelected">✓ <span id="fileName"></span></div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label>Questions</label>
+          <input type="number" id="numQuestions" value="5" min="1" max="20" />
+        </div>
+        <div class="field">
+          <label>Quiz Type</label>
+          <select id="quizType">
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="true_false">True / False</option>
+            <option value="short_answer">Short Answer</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="generateBtn" disabled>Generate Quiz</button>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      Analyzing document & generating quiz…
+    </div>
+
+    <div id="results">
+      <div class="results-header">
+        <div class="results-title">Your Quiz</div>
+        <div class="results-count" id="resultsCount"></div>
+      </div>
+      <div id="questionsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const fileSelected = document.getElementById('fileSelected');
+    const fileName = document.getElementById('fileName');
+    const generateBtn = document.getElementById('generateBtn');
+    const loader = document.getElementById('loader');
+    const results = document.getElementById('results');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const resultsCount = document.getElementById('resultsCount');
+    const errorBox = document.getElementById('errorBox');
+
+    // File selection
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) {
+        fileName.textContent = fileInput.files[0].name;
+        fileSelected.style.display = 'block';
+        generateBtn.disabled = false;
+      }
+    });
+
+    // Drag & drop
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        fileInput.files = e.dataTransfer.files;
+        fileName.textContent = file.name;
+        fileSelected.style.display = 'block';
+        generateBtn.disabled = false;
+      }
+    });
+
+    // Generate
+    generateBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      errorBox.style.display = 'none';
+      loader.style.display = 'block';
+      results.style.display = 'none';
+      generateBtn.disabled = true;
+      questionsContainer.innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('numQuestions', document.getElementById('numQuestions').value);
+      formData.append('quizType', document.getElementById('quizType').value);
+
+      try {
+        const res = await fetch('/api/generate-quiz', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+        renderQuiz(data.questions);
+      } catch (err) {
+        errorBox.textContent = '⚠ ' + err.message;
+        errorBox.style.display = 'block';
+      } finally {
+        loader.style.display = 'none';
+        generateBtn.disabled = false;
+      }
+    });
+
+    function renderQuiz(questions) {
+      resultsCount.textContent = `${questions.length} question${questions.length !== 1 ? 's' : ''}`;
+      results.style.display = 'block';
+
+      questions.forEach((q, i) => {
+        const card = document.createElement('div');
+        card.className = 'question-card';
+
+        const optionsHtml = (q.options || []).map(opt => {
+          const letter = opt.charAt(0);
+          return `<div class="option" data-letter="${letter}" onclick="selectOption(this, '${q.answer}', ${i})">${opt}</div>`;
+        }).join('');
+
+        card.innerHTML = `
+          <div class="q-number">Question ${i + 1}</div>
+          <div class="q-text">${q.question}</div>
+          ${optionsHtml ? `<div class="options">${optionsHtml}</div>` : ''}
+          <div class="explanation" id="exp-${i}">${q.explanation || ''}</div>
+        `;
+
+        questionsContainer.appendChild(card);
+      });
+    }
+
+    function selectOption(el, answer, qIndex) {
+      const options = el.closest('.options').querySelectorAll('.option');
+      options.forEach(o => o.style.pointerEvents = 'none');
+
+      if (el.dataset.letter === answer) {
+        el.classList.add('correct');
+      } else {
+        el.classList.add('wrong');
+        options.forEach(o => { if (o.dataset.letter === answer) o.classList.add('correct'); });
+      }
+
+      const exp = document.getElementById(`exp-${qIndex}`);
+      if (exp) exp.classList.add('show');
+    }
+  </script>
+</body>
+</html>
